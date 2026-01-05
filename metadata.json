@@ -1,0 +1,7 @@
+{
+  "name": "CropEye PlanetEyeFarm",
+  "description": "An advanced agricultural monitoring system for onion farming, featuring satellite plot mapping, soil analysis, and detailed weather forecasting.",
+  "requestFramePermissions": [
+    "geolocation"
+  ]
+}
