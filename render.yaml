@@ -1,0 +1,10 @@
+services:
+  - type: web
+    name: cropeye-planeteyefarm
+    env: node
+    buildCommand: npm install --legacy-peer-deps && npm run build
+    startCommand: npm run preview
+    envVars:
+      - key: NODE_ENV
+        value: production
+
