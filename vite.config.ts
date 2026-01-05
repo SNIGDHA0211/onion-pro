@@ -18,7 +18,12 @@ export default defineConfig(({ mode }) => {
         alias: {
           '@': path.resolve(__dirname, '.'),
         },
-        dedupe: ['react', 'react-dom']
+        dedupe: ['react', 'react-dom', 'react-is']
+      },
+      build: {
+        commonjsOptions: {
+          include: [/react-is/, /node_modules/]
+        }
       }
     };
 });
