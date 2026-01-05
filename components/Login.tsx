@@ -84,10 +84,10 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
             Login to PlanetEyeFarm
           </button>
         </form>
-
+{/* 
         <div className="mt-10 text-gray-400 text-xs font-bold tracking-tight">
           Powered by IT AI Solutions
-        </div>
+        </div> */}
       </div>
     </div>
   );

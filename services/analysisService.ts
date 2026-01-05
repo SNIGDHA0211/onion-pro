@@ -32,15 +32,33 @@ export interface PixelSummary {
   chewing_pixel_count?: number;
   chewing_pixel_percentage?: number;
   chewing_pixel_coordinates?: number[][];
+  chewing_affected_pixel_count?: number;
+  chewing_affected_pixel_percentage?: number;
+  chewing_affected_pixel_coordinates?: number[][];
   sucking_pixel_count?: number;
   sucking_pixel_percentage?: number;
   sucking_pixel_coordinates?: number[][];
+  sucking_affected_pixel_count?: number;
+  sucking_affected_pixel_percentage?: number;
+  sucking_affected_pixel_coordinates?: number[][];
   fungi_pixel_count?: number;
   fungi_pixel_percentage?: number;
   fungi_pixel_coordinates?: number[][];
+  fungi_affected_pixel_count?: number;
+  fungi_affected_pixel_percentage?: number;
+  fungi_affected_pixel_coordinates?: number[][];
   soil_borne_pixel_count?: number;
   soil_borne_pixel_percentage?: number;
   soil_borne_pixel_coordinates?: number[][];
+  SoilBorne_affected_pixel_count?: number;
+  SoilBorne_affected_pixel_percentage?: number;
+  SoilBorne_affected_pixel_coordinates?: number[][];
+  SoilBorn_affected_pixel_count?: number;
+  SoilBorn_affected_pixel_percentage?: number;
+  SoilBorn_affected_pixel_coordinates?: number[][];
+  adequat_pixel_count?: number;
+  adequat_pixel_percentage?: number;
+  adequat_pixel_coordinates?: number[][];
 }
 
 export interface AnalysisResponse {
@@ -156,20 +174,64 @@ export const fetchSoilAnalysis = async (
   startDate: string = '2025-11-01',
   endDate: string = '2026-01-01'
 ): Promise<SoilAnalysisResponse> => {
-  const response = await fetch(
-    `${BASE_URL}/process_plot/?plot_name=${encodeURIComponent(plotName)}&start_date=${startDate}&end_date=${endDate}`,
-    {
+  const url = `${BASE_URL}/process_plot?plot_name=${encodeURIComponent(plotName)}&start_date=${startDate}&end_date=${endDate}`;
+  
+  try {
+    const response = await fetch(url, {
       method: 'POST',
+      mode: 'cors',
+      cache: 'no-cache',
+      credentials: 'omit',
       headers: {
         'accept': 'application/json',
       },
+      // Note: Not setting body at all, let browser handle empty POST body
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text().catch(() => 'Unable to read error response');
+      console.error('Soil analysis API error:', {
+        status: response.status,
+        statusText: response.statusText,
+        url,
+        errorText,
+      });
+      
+      // Handle 502 Bad Gateway - filter out HTML error page
+      if (response.status === 502 || errorText.includes('<html>') || errorText.includes('Bad Gateway')) {
+        throw new Error('Backend service is temporarily unavailable. Please try again in a few moments.');
+      }
+      
+      throw new Error(`Failed to fetch soil analysis: ${response.status} ${response.statusText}`);
     }
-  );
 
-  if (!response.ok) {
-    throw new Error(`Failed to fetch soil analysis: ${response.statusText}`);
+    return response.json();
+  } catch (error: any) {
+    console.error('Error in fetchSoilAnalysis:', {
+      error,
+      message: error?.message,
+      name: error?.name,
+      stack: error?.stack,
+      url,
+      plotName,
+      startDate,
+      endDate,
+    });
+    
+    // Provide more specific error messages
+    let errorMessage = 'Failed to fetch soil analysis';
+    if (error?.message?.includes('Failed to fetch') || error?.name === 'TypeError') {
+      // Check for CORS error specifically
+      if (error?.message?.includes('CORS') || error?.message?.includes('cors')) {
+        errorMessage = 'CORS error: Backend server is not allowing requests from this origin. Please check CORS configuration on the server.';
+      } else {
+        errorMessage = 'Cannot connect to server. Please check if the backend service is running and accessible.';
+      }
+    } else if (error?.message) {
+      errorMessage = error.message;
+    }
+    
+    throw new Error(errorMessage);
   }
-
-  return response.json();
 };
 

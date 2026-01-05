@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
-import { MapContainer, TileLayer, GeoJSON, useMap } from 'react-leaflet';
+import { MapContainer, TileLayer, GeoJSON, useMap, Circle } from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import { fetchPlots, extractPlotNames, PlotsResponse, GeoJSONFeature } from '../services/plotsService';
@@ -103,7 +103,9 @@ const MapWrapper: React.FC<{
   styleFeature: (feature: any) => any;
   onEachFeature: (feature: any, layer: any) => void;
   tileUrl?: string;
-}> = ({ geojson, selectedPlot, plotsData, styleFeature, onEachFeature, tileUrl }) => {
+  pixelCoordinates?: number[][];
+  selectedLegendLabel?: string | null;
+}> = ({ geojson, selectedPlot, plotsData, styleFeature, onEachFeature, tileUrl, pixelCoordinates = [], selectedLegendLabel = null }) => {
   const mapInstanceRef = useRef<L.Map | null>(null);
   const containerRef = useRef<HTMLDivElement | null>(null);
   const initializedRef = useRef(false);
@@ -305,6 +307,28 @@ const MapWrapper: React.FC<{
           style={styleFeature}
           onEachFeature={onEachFeature}
         />
+        {/* Display pixel circles when legend is clicked */}
+        {pixelCoordinates && pixelCoordinates.length > 0 && pixelCoordinates.map((coord, idx) => {
+          // Coordinates are typically [lng, lat]
+          if (!Array.isArray(coord) || coord.length < 2) return null;
+          const [lng, lat] = coord;
+          if (isNaN(lat) || isNaN(lng)) return null;
+          
+          return (
+            <Circle
+              key={`pixel-${selectedLegendLabel || 'unknown'}-${idx}`}
+              center={[lat, lng]}
+              radius={2}
+              pathOptions={{
+                fillColor: '#FFFFFF',
+                fillOpacity: 1,
+                color: '#FFFFFF',
+                weight: 1,
+                opacity: 1,
+              }}
+            />
+          );
+        })}
       </MapContainer>
     </div>
   );
@@ -322,6 +346,7 @@ export const MapPlot: React.FC = () => {
   const [analysisLoading, setAnalysisLoading] = useState(false);
   const [tileUrl, setTileUrl] = useState<string | undefined>(undefined);
   const [pixelSummary, setPixelSummary] = useState<PixelSummary | undefined>(undefined);
+  const [selectedLegendLabel, setSelectedLegendLabel] = useState<string | null>(null);
   const geoJsonLayerRef = useRef<L.GeoJSON>(null);
   const { setSelectedPlotName } = useAppContext();
 
@@ -366,6 +391,8 @@ export const MapPlot: React.FC = () => {
       setTileUrl(undefined);
       setPixelSummary(undefined);
     }
+    // Clear selected legend when changing plot
+    setSelectedLegendLabel(null);
   };
 
   // Fetch analysis data when tab or plot changes
@@ -698,6 +725,88 @@ export const MapPlot: React.FC = () => {
 
   const legendItems = getLegendData();
 
+  // Get pixel coordinates for selected legend label
+  const getPixelCoordinates = useMemo(() => {
+    if (!selectedLegendLabel || !pixelSummary) return [];
+
+    let coordinates: number[][] = [];
+
+    switch (activeTab) {
+      case 'Growth':
+        if (selectedLegendLabel === 'Weak') {
+          coordinates = pixelSummary.weak_pixel_coordinates || [];
+        } else if (selectedLegendLabel === 'Stress') {
+          coordinates = pixelSummary.stress_pixel_coordinates || [];
+        } else if (selectedLegendLabel === 'Moderate') {
+          coordinates = pixelSummary.moderate_pixel_coordinates || [];
+        } else if (selectedLegendLabel === 'Healthy') {
+          coordinates = pixelSummary.healthy_pixel_coordinates || [];
+        }
+        break;
+      case 'Water Uptake':
+        if (selectedLegendLabel === 'Deficient') {
+          coordinates = (pixelSummary as any).deficient_pixel_coordinates || [];
+        } else if (selectedLegendLabel === 'Less') {
+          coordinates = pixelSummary.less_pixel_coordinates || [];
+        } else if (selectedLegendLabel === 'Adequate') {
+          // Try both "adequate" and "adequat" (API might use either)
+          coordinates = (pixelSummary as any).adequate_pixel_coordinates || 
+                       (pixelSummary as any).adequat_pixel_coordinates || [];
+        } else if (selectedLegendLabel === 'Excellent') {
+          coordinates = pixelSummary.excellent_pixel_coordinates || [];
+        } else if (selectedLegendLabel === 'Excess') {
+          coordinates = pixelSummary.excess_pixel_coordinates || [];
+        }
+        break;
+      case 'Soil Moisture':
+        if (selectedLegendLabel === 'Less') {
+          coordinates = pixelSummary.less_pixel_coordinates || [];
+        } else if (selectedLegendLabel === 'Adequate') {
+          coordinates = pixelSummary.adequate_pixel_coordinates || [];
+        } else if (selectedLegendLabel === 'Excellent') {
+          coordinates = pixelSummary.excellent_pixel_coordinates || [];
+        } else if (selectedLegendLabel === 'Excess') {
+          coordinates = pixelSummary.excess_pixel_coordinates || [];
+        } else if (selectedLegendLabel === 'Shallow') {
+          coordinates = pixelSummary.shallow_water_pixel_coordinates || [];
+        }
+        break;
+      case 'Pest':
+        if (selectedLegendLabel === 'Chewing') {
+          // Try both "chewing_pixel_coordinates" and "chewing_affected_pixel_coordinates"
+          coordinates = (pixelSummary as any).chewing_pixel_coordinates || 
+                       (pixelSummary as any).chewing_affected_pixel_coordinates || [];
+        } else if (selectedLegendLabel === 'Sucking') {
+          // Try both "sucking_pixel_coordinates" and "sucking_affected_pixel_coordinates"
+          coordinates = (pixelSummary as any).sucking_pixel_coordinates || 
+                       (pixelSummary as any).sucking_affected_pixel_coordinates || [];
+        } else if (selectedLegendLabel === 'Fungi') {
+          // Try both "fungi_pixel_coordinates" and "fungi_affected_pixel_coordinates"
+          coordinates = (pixelSummary as any).fungi_pixel_coordinates || 
+                       (pixelSummary as any).fungi_affected_pixel_coordinates || [];
+        } else if (selectedLegendLabel === 'Soil Borne') {
+          // Try both "soil_borne_pixel_coordinates" and "SoilBorne_affected_pixel_coordinates"
+          coordinates = (pixelSummary as any).soil_borne_pixel_coordinates || 
+                       (pixelSummary as any).SoilBorne_affected_pixel_coordinates || 
+                       (pixelSummary as any).SoilBorn_affected_pixel_coordinates || [];
+        }
+        break;
+    }
+
+    return coordinates;
+  }, [selectedLegendLabel, pixelSummary, activeTab]);
+
+  // Handle legend circle click
+  const handleLegendClick = useCallback((label: string, value: number) => {
+    if (value === 0) return;
+    // Toggle selection - if same label clicked, deselect
+    if (selectedLegendLabel === label) {
+      setSelectedLegendLabel(null);
+    } else {
+      setSelectedLegendLabel(label);
+    }
+  }, [selectedLegendLabel]);
+
   return (
     <div className="bg-white rounded-3xl p-4 pb-3 shadow-xl border border-gray-100 flex flex-col h-full">
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-3 mb-3">
@@ -705,7 +814,10 @@ export const MapPlot: React.FC = () => {
           {tabs.map(tab => (
             <button
               key={tab}
-              onClick={() => setActiveTab(tab)}
+              onClick={() => {
+                setActiveTab(tab);
+                setSelectedLegendLabel(null); // Clear selected legend when switching tabs
+              }}
               className={`px-4 py-2 rounded-xl text-sm font-bold transition-all shadow-sm ${
                 activeTab === tab ? 'bg-blue-600 text-white shadow-blue-200' : 'bg-gray-50 text-gray-600 hover:bg-gray-100'
               }`}
@@ -758,14 +870,20 @@ export const MapPlot: React.FC = () => {
               styleFeature={styleFeature}
               onEachFeature={onEachFeature}
               tileUrl={tileUrl}
+              pixelCoordinates={getPixelCoordinates}
+              selectedLegendLabel={selectedLegendLabel}
             />
 
 
             {/* Dynamic Legend Circles */}
             <div className="absolute bottom-4 left-1/2 -translate-x-1/2 z-[1000] flex items-center justify-center space-x-4 w-full px-4 overflow-x-auto no-scrollbar">
               {legendItems.map((item, index) => (
-                <div key={index} className="flex flex-col items-center flex-shrink-0">
-                  <div className={`w-12 h-12 rounded-full ${item.color} border-4 border-white flex items-center justify-center text-white font-black shadow-xl text-sm`}>
+                <div 
+                  key={index} 
+                  className="flex flex-col items-center flex-shrink-0 cursor-pointer transition-transform hover:scale-110"
+                  onClick={() => handleLegendClick(item.label, item.value)}
+                >
+                  <div className={`w-12 h-12 rounded-full ${item.color} flex items-center justify-center text-white font-black shadow-xl text-sm ${selectedLegendLabel === item.label ? 'border-4 border-yellow-400' : 'border-4 border-white'}`}>
                     {item.value}
                   </div>
                   <span className="text-[10px] font-black text-white mt-1.5 drop-shadow-[0_2px_2px_rgba(0,0,0,0.8)] uppercase tracking-tight">

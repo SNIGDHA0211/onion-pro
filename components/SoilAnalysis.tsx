@@ -1,8 +1,6 @@
 
-import React, { useRef, useState, useEffect } from 'react';
-import { Download, Loader2 } from 'lucide-react';
-import { jsPDF } from 'jspdf';
-import html2canvas from 'html2canvas';
+import React, { useState, useEffect } from 'react';
+import { Loader2 } from 'lucide-react';
 import { useAppContext } from "../context/AppContext";
 import { fetchSoilAnalysis, SoilAnalysisResponse } from "../services/analysisService";
 
@@ -38,42 +36,40 @@ const HorizontalBarChart: React.FC<{ metrics: Metric[] }> = ({ metrics }) => {
   const metricsWithRanges = metrics.filter(m => m.range);
   
   return (
-    <div className="mb-3">
-      <div className="flex gap-1 mb-2">
-        {/* Vertical Scale Labels */}
-        <div className="flex flex-col justify-between text-[9px] text-gray-600 h-32 flex-shrink-0 pr-2">
-          <span>Very High</span>
-          <span>Optimal</span>
-          <span>Medium</span>
-          <span>Low</span>
-          <span>Very Low</span>
-        </div>
-        
-        {/* Horizontal Bars */}
-        <div className="flex items-end justify-start gap-1 flex-1 h-32 min-w-0 overflow-x-auto">
-          {metricsWithRanges.map((metric, idx) => {
-            const statusColor = STATUS_COLORS[metric.status];
-            const borderClass = BORDER_CLASSES[statusColor];
-            
-            return (
+    <div className="flex gap-2 mb-2">
+      {/* Vertical Scale Labels */}
+      <div className="flex flex-col justify-between text-[9px] text-gray-600 h-32 flex-shrink-0 pr-3">
+        <span>Very High</span>
+        <span>Optimal</span>
+        <span>Medium</span>
+        <span>Low</span>
+        <span>Very Low</span>
+      </div>
+      
+      {/* Horizontal Bars - Width matches cards grid */}
+      <div className="flex items-end justify-start flex-1 h-32" style={{ gap: '1rem' }}>
+        {metricsWithRanges.map((metric, idx) => {
+          const statusColor = STATUS_COLORS[metric.status];
+          const borderClass = BORDER_CLASSES[statusColor];
+          
+          return (
+            <div
+              key={idx}
+              className={`flex flex-col items-center justify-end h-full w-7 border-2 rounded flex-shrink-0 ${borderClass}`}
+            >
               <div
-                key={idx}
-                className={`flex flex-col items-center justify-end h-full w-7 border-2 rounded flex-shrink-0 ${borderClass}`}
-              >
-                <div
-                  className="w-full rounded-t min-h-1 transition-all"
-                  style={{
-                    height: `${metric.percentage}%`,
-                    backgroundColor: statusColor,
-                  }}
-                ></div>
-                <div className="text-center text-[8px] mt-0.5 leading-tight">
-                  <strong>{metric.symbol}</strong>
-                </div>
+                className="w-full rounded-t min-h-1 transition-all"
+                style={{
+                  height: `${Math.max(metric.percentage || 0, 10)}%`, // Equal minimum height for all bars
+                  backgroundColor: statusColor,
+                }}
+              ></div>
+              <div className="text-center text-[8px] mt-0.5 leading-tight">
+                <strong>{metric.symbol}</strong>
               </div>
-            );
-          })}
-        </div>
+            </div>
+          );
+        })}
       </div>
     </div>
   );
@@ -292,7 +288,7 @@ const mapSoilDataToMetrics = (data: SoilAnalysisResponse | null): Metric[] => {
       symbol: 'N',
       value: value !== null ? value.toFixed(2) : 'Not Available',
       unit: 'kg/ha',
-      range: '280 - 560',
+      range: '50 - 150',
       status: level,
       percentage,
     });
@@ -308,7 +304,7 @@ const mapSoilDataToMetrics = (data: SoilAnalysisResponse | null): Metric[] => {
       symbol: 'P',
       value: value !== null ? value.toFixed(2) : 'Not Available',
       unit: 'kg/ha',
-      range: '22 - 55',
+      range: '25 - 75',
       status: level,
       percentage,
     });
@@ -324,7 +320,7 @@ const mapSoilDataToMetrics = (data: SoilAnalysisResponse | null): Metric[] => {
       symbol: 'K',
       value: value !== null ? value.toFixed(2) : 'Not Available',
       unit: 'kg/ha',
-      range: '110 - 280',
+      range: '20 - 100',
       status: level,
       percentage,
     });
@@ -470,8 +466,6 @@ const mapSoilDataToMetrics = (data: SoilAnalysisResponse | null): Metric[] => {
 
 export const SoilAnalysis: React.FC = () => {
   const { selectedPlotName } = useAppContext();
-  const reportRef = useRef<HTMLDivElement>(null);
-  const [isDownloading, setIsDownloading] = useState(false);
   const [soilData, setSoilData] = useState<SoilAnalysisResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -512,49 +506,40 @@ export const SoilAnalysis: React.FC = () => {
   }, [selectedPlotName]);
 
   const metrics = mapSoilDataToMetrics(soilData);
-
-  const handleDownloadPDF = async () => {
-    if (!reportRef.current) return;
-    setIsDownloading(true);
-    const originalScrollPos = window.scrollY;
-    window.scrollTo(0, 0);
-
-    try {
-      const element = reportRef.current;
-      const canvas = await html2canvas(element, {
-        scale: 2,
-        useCORS: true,
-        logging: false,
-        backgroundColor: '#f8f9fa',
-        windowWidth: element.scrollWidth,
-        windowHeight: element.scrollHeight,
-        onclone: (clonedDoc) => {
-          const btn = clonedDoc.querySelector('.pdf-download-btn');
-          if (btn) (btn as HTMLElement).style.display = 'none';
-          const scrollUI = clonedDoc.querySelector('.custom-scrollbar-ui');
-          if (scrollUI) (scrollUI as HTMLElement).style.display = 'none';
-        }
-      });
-      
-      const imgData = canvas.toDataURL('image/png');
-      const pdf = new jsPDF({
-        orientation: 'portrait',
-        unit: 'px',
-        format: [canvas.width / 2, canvas.height / 2]
-      });
-
-      pdf.addImage(imgData, 'PNG', 0, 0, pdf.internal.pageSize.getWidth(), pdf.internal.pageSize.getHeight());
-      pdf.save(`Soil_Analysis_Report_${selectedPlotName}.pdf`);
-    } catch (error) {
-      console.error('PDF Generation Error:', error);
-    } finally {
-      setIsDownloading(false);
-      window.scrollTo(0, originalScrollPos);
-    }
-  };
+  
+  // Define all expected metrics to show empty cards for missing ones
+  const allExpectedMetrics = [
+    { name: 'Nitrogen', symbol: 'N', key: 'nitrogen' },
+    { name: 'Phosphorus', symbol: 'P', key: 'phosphorus' },
+    { name: 'Potassium', symbol: 'K', key: 'potassium' },
+    { name: 'Soil pH', symbol: 'pH', key: 'ph' },
+    { name: 'CEC', symbol: 'CEC', key: 'cec' },
+    { name: 'Fe', symbol: 'Fe', key: 'fe' },
+    { name: 'Zinc', symbol: 'Zn', key: 'zinc' },
+    { name: 'Soil Organic Carbon', symbol: 'SOC', key: 'soc' },
+    { name: 'Organic Carbon Stock', symbol: 'OCS', key: 'ocs' },
+    { name: 'Clay', symbol: 'CLAY', key: 'clay' },
+    { name: 'Sand', symbol: 'SAND', key: 'sand' },
+    { name: 'Silt', symbol: 'SILT', key: 'silt' },
+  ];
+  
+  // Merge expected metrics with actual data, showing empty cards for missing ones
+  const allMetrics = allExpectedMetrics.map(expected => {
+    const found = metrics.find(m => m.name === expected.name || m.symbol === expected.symbol);
+    if (found) return found;
+    // Return empty metric card
+    return {
+      name: expected.name,
+      symbol: expected.symbol,
+      value: 'N/A',
+      unit: '',
+      status: 'Medium' as const,
+      percentage: 0,
+    };
+  });
 
   return (
-    <div ref={reportRef} className="bg-[#f8f9fa] rounded-[2rem] p-4 md:p-5 pb-3 shadow-2xl border border-gray-100 relative overflow-hidden">
+    <div className="bg-[#f8f9fa] rounded-[2rem] p-4 md:p-5 pb-3 shadow-2xl border border-gray-100 relative overflow-hidden">
       {/* Header */}
       <div className="flex justify-between items-center mb-4">
         <div className="flex items-center space-x-3">
@@ -563,13 +548,6 @@ export const SoilAnalysis: React.FC = () => {
             Plot: {soilData?.["Plot Name"] || selectedPlotName}
           </span>
         </div>
-        <button 
-          onClick={handleDownloadPDF}
-          disabled={isDownloading}
-          className="pdf-download-btn p-2.5 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-all shadow-md active:scale-95 disabled:opacity-50"
-        >
-          {isDownloading ? <Loader2 size={18} className="animate-spin" /> : <Download size={18} />}
-        </button>
       </div>
 
       {/* Show message when "All" is selected */}
@@ -607,13 +585,17 @@ export const SoilAnalysis: React.FC = () => {
         </div>
       )}
 
-      {/* Horizontal Bar Chart Section */}
-      {!loading && !error && selectedPlotName !== 'All' && metrics.length > 0 && (
-        <HorizontalBarChart metrics={metrics} />
+      {/* Horizontal Bar Chart Section - Wrapped to match cards grid */}
+      {!loading && !error && selectedPlotName !== 'All' && allMetrics.length > 0 && (
+        <div className="grid grid-cols-3 gap-2 mb-3">
+          <div className="col-span-3">
+            <HorizontalBarChart metrics={allMetrics.filter(m => m.range)} />
+          </div>
+        </div>
       )}
 
       {/* Legend */}
-      {!loading && !error && selectedPlotName !== 'All' && metrics.length > 0 && (
+      {!loading && !error && selectedPlotName !== 'All' && allMetrics.length > 0 && (
         <div className="flex items-center justify-center gap-2 flex-wrap my-2 mb-3">
           {Object.entries(STATUS_COLORS).map(([label, color]) => (
             <div key={label} className="flex items-center gap-1">
@@ -624,10 +606,10 @@ export const SoilAnalysis: React.FC = () => {
         </div>
       )}
 
-      {/* Details Grid */}
-      {!loading && !error && selectedPlotName !== 'All' && metrics.length > 0 && (
+      {/* Details Grid - Show all 12 cards */}
+      {!loading && !error && selectedPlotName !== 'All' && (
         <div className="grid grid-cols-3 gap-2 mt-3">
-          {metrics.map((metric, idx) => (
+          {allMetrics.map((metric, idx) => (
             <MetricCard key={idx} metric={metric} />
           ))}
         </div>
@@ -640,11 +622,11 @@ export const SoilAnalysis: React.FC = () => {
         </div>
       )}
 
-      {/* Footer */}
+      {/* Footer
       <div className="mt-4 pt-3 border-t border-gray-100 flex justify-between items-center text-[9px] text-gray-400 font-bold uppercase tracking-widest">
         <span>Updated: {new Date().toLocaleDateString()}</span>
         <span>IT AI SOLUTIONS</span>
-      </div>
+      </div> */}
     </div>
   );
 };
