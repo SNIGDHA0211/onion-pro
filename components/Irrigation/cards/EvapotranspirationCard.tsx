@@ -19,9 +19,10 @@ interface ETResponse {
 
 interface EvapotranspirationCardProps {
   plotsLoading?: boolean;
+  availablePlots?: string[];
 }
 
-const EvapotranspirationCard: React.FC<EvapotranspirationCardProps> = ({ plotsLoading }) => {
+const EvapotranspirationCard: React.FC<EvapotranspirationCardProps> = ({ plotsLoading, availablePlots = [] }) => {
   const { appState, setAppState, getCached, setCached, selectedPlotName } = useAppContext();
   
   const [plotName, setPlotName] = useState<string>(selectedPlotName || "");
@@ -37,6 +38,7 @@ const EvapotranspirationCard: React.FC<EvapotranspirationCardProps> = ({ plotsLo
   useEffect(() => {
     if (selectedPlotName && selectedPlotName !== plotName) {
       setPlotName(selectedPlotName);
+      setError(null); // Clear any previous errors when plot changes
       console.log('EvapotranspirationCard: Setting plot name to:', selectedPlotName);
     }
   }, [selectedPlotName, plotName]);
@@ -45,6 +47,14 @@ const EvapotranspirationCard: React.FC<EvapotranspirationCardProps> = ({ plotsLo
   useEffect(() => {
     if (!plotName || !selectedPlotName || plotsLoading) {
       setLoading(false);
+      return;
+    }
+
+    // If we have available plots list, validate the plot exists
+    if (availablePlots.length > 0 && !availablePlots.includes(plotName)) {
+      console.warn(`Plot ${plotName} not found in available plots list`);
+      setLoading(false);
+      setError(null); // Don't show error if plot doesn't exist in the list
       return;
     }
 
@@ -105,6 +115,16 @@ const EvapotranspirationCard: React.FC<EvapotranspirationCardProps> = ({ plotsLo
         if (!response.ok) {
           const errorText = await response.text().catch(() => 'Unable to read error response');
           console.error('ET API Error:', response.status, errorText);
+          
+          // Handle 404 (Plot not found) gracefully - don't show error to user
+          if (response.status === 404) {
+            console.warn(`Plot '${plotName}' not found in backend. Skipping error display.`);
+            setError(null); // Clear any previous error
+            setLoading(false);
+            fetchingRef.current = false;
+            return; // Exit early without throwing error
+          }
+          
           throw new Error(`HTTP ${response.status} ${response.statusText} - ${errorText}`);
         }
 
@@ -211,7 +231,7 @@ const EvapotranspirationCard: React.FC<EvapotranspirationCardProps> = ({ plotsLo
 
     fetchETData();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [plotName, selectedPlotName, plotsLoading]);
+  }, [plotName, selectedPlotName, plotsLoading, availablePlots]);
 
   if (!selectedPlotName || plotsLoading) {
     return (
