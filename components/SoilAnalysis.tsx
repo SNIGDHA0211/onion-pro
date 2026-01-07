@@ -153,28 +153,28 @@ const getNumericValue = (val: number | null | undefined): number | null => {
 // Level calculation functions
 function getNitrogenLevel(value: number | null): 'Very Low' | 'Low' | 'Medium' | 'Optimal' | 'Very High' {
   if (value === null) return 'Medium';
-  if (value < 140) return 'Very Low';
-  if (value < 210) return 'Low';
-  if (value < 280) return 'Medium';
-  if (value <= 560) return 'Optimal';
+  if (value < 50) return 'Very Low';
+  if (value < 75) return 'Low';
+  if (value < 100) return 'Medium';
+  if (value <= 150) return 'Optimal';
   return 'Very High';
 }
 
 function getPhosphorusLevel(value: number | null): 'Very Low' | 'Low' | 'Medium' | 'Optimal' | 'Very High' {
   if (value === null) return 'Medium';
-  if (value < 11) return 'Very Low';
-  if (value < 17) return 'Low';
-  if (value < 22) return 'Medium';
-  if (value <= 55) return 'Optimal';
+  if (value < 25) return 'Very Low';
+  if (value < 40) return 'Low';
+  if (value < 50) return 'Medium';
+  if (value <= 75) return 'Optimal';
   return 'Very High';
 }
 
 function getPotassiumLevel(value: number | null): 'Very Low' | 'Low' | 'Medium' | 'Optimal' | 'Very High' {
   if (value === null) return 'Medium';
-  if (value < 55) return 'Very Low';
-  if (value < 82) return 'Low';
-  if (value < 110) return 'Medium';
-  if (value <= 280) return 'Optimal';
+  if (value < 20) return 'Very Low';
+  if (value < 50) return 'Low';
+  if (value < 75) return 'Medium';
+  if (value <= 100) return 'Optimal';
   return 'Very High';
 }
 
@@ -282,7 +282,7 @@ const mapSoilDataToMetrics = (data: SoilAnalysisResponse | null): Metric[] => {
   if (data["Nitrogen (N) [kg/ha]"] !== undefined) {
     const value = getNumericValue(data["Nitrogen (N) [kg/ha]"]);
     const level = getNitrogenLevel(value);
-    const percentage = calculatePercentage(value, 280, 560, 100, 700);
+    const percentage = calculatePercentage(value, 100, 150, 0, 200);
     metrics.push({
       name: 'Nitrogen',
       symbol: 'N',
@@ -298,7 +298,7 @@ const mapSoilDataToMetrics = (data: SoilAnalysisResponse | null): Metric[] => {
   if (data["Phosphorus (P) [kg/ha]"] !== undefined) {
     const value = getNumericValue(data["Phosphorus (P) [kg/ha]"]);
     const level = getPhosphorusLevel(value);
-    const percentage = calculatePercentage(value, 22, 55, 5, 80);
+    const percentage = calculatePercentage(value, 50, 75, 0, 100);
     metrics.push({
       name: 'Phosphorus',
       symbol: 'P',
@@ -314,7 +314,7 @@ const mapSoilDataToMetrics = (data: SoilAnalysisResponse | null): Metric[] => {
   if (data["Potassium (K) [kg/ha]"] !== undefined) {
     const value = getNumericValue(data["Potassium (K) [kg/ha]"]);
     const level = getPotassiumLevel(value);
-    const percentage = calculatePercentage(value, 110, 280, 30, 350);
+    const percentage = calculatePercentage(value, 75, 100, 0, 120);
     metrics.push({
       name: 'Potassium',
       symbol: 'K',
