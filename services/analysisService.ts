@@ -190,12 +190,6 @@ export const fetchSoilAnalysis = async (
 
     if (!response.ok) {
       const errorText = await response.text().catch(() => 'Unable to read error response');
-      console.error('Soil analysis API error:', {
-        status: response.status,
-        statusText: response.statusText,
-        url,
-        errorText,
-      });
       
       // Handle 502 Bad Gateway - filter out HTML error page
       if (response.status === 502 || errorText.includes('<html>') || errorText.includes('Bad Gateway')) {
@@ -205,10 +199,12 @@ export const fetchSoilAnalysis = async (
       // Handle 400 Bad Request - often means plot not found
       if (response.status === 400) {
         let errorMessage = 'Failed to fetch soil analysis';
+        let isPlotNotFound = false;
         try {
           const errorJson = JSON.parse(errorText);
           if (errorJson.message?.includes('not found') || errorJson.message?.includes('Plot')) {
             errorMessage = `Plot '${plotName}' not found. Please select a valid plot from the list.`;
+            isPlotNotFound = true;
           } else if (errorJson.message) {
             errorMessage = errorJson.message;
           }
@@ -216,31 +212,56 @@ export const fetchSoilAnalysis = async (
           // If parsing fails, use the raw error text if it contains useful info
           if (errorText.includes('not found') || errorText.includes('Plot')) {
             errorMessage = `Plot '${plotName}' not found. Please select a valid plot from the list.`;
+            isPlotNotFound = true;
           }
         }
+        
+        // Only log to console if it's not a plot not found error
+        if (!isPlotNotFound) {
+          console.warn('Soil analysis API error:', {
+            status: response.status,
+            statusText: response.statusText,
+            url,
+            errorText,
+          });
+        } else {
+          console.warn(`Plot '${plotName}' not found in backend for soil analysis. Skipping.`);
+        }
+        
         throw new Error(errorMessage);
       }
       
       // Handle 404 Not Found
       if (response.status === 404) {
+        console.warn(`Plot '${plotName}' not found in backend for soil analysis. Skipping.`);
         throw new Error(`Plot '${plotName}' not found. Please select a valid plot from the list.`);
       }
+      
+      // Log other errors with warning instead of error to reduce console noise
+      console.warn('Soil analysis API error:', {
+        status: response.status,
+        statusText: response.statusText,
+        url,
+        errorText,
+      });
       
       throw new Error(`Failed to fetch soil analysis: ${response.status} ${response.statusText}`);
     }
 
     return response.json();
   } catch (error: any) {
-    console.error('Error in fetchSoilAnalysis:', {
-      error,
-      message: error?.message,
-      name: error?.name,
-      stack: error?.stack,
-      url,
-      plotName,
-      startDate,
-      endDate,
-    });
+    // Only log non-plot-not-found errors to reduce console noise
+    if (!error?.message?.includes("not found") && !error?.message?.includes("Plot")) {
+      console.warn('Error in fetchSoilAnalysis:', {
+        error,
+        message: error?.message,
+        name: error?.name,
+        url,
+        plotName,
+        startDate,
+        endDate,
+      });
+    }
     
     // If error already has a user-friendly message, re-throw it
     if (error?.message?.includes("not found") || error?.message?.includes("Plot")) {

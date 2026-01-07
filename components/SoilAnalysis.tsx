@@ -495,8 +495,14 @@ export const SoilAnalysis: React.FC = () => {
         const data = await fetchSoilAnalysis(selectedPlotName, startDateStr, endDateStr);
         setSoilData(data);
       } catch (err: any) {
-        console.error('Error fetching soil analysis:', err);
-        setError(err.message || 'Failed to fetch soil analysis data');
+        // Only show error if it's not a plot not found error
+        const errorMessage = err.message || 'Failed to fetch soil analysis data';
+        if (errorMessage.includes('not found') || errorMessage.includes('Plot')) {
+          // Don't show plot not found errors - just log quietly
+          setError(null);
+        } else {
+          setError(errorMessage);
+        }
       } finally {
         setLoading(false);
       }

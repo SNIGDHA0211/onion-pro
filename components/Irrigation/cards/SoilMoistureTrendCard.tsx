@@ -104,7 +104,18 @@ const SoilMoistureTrendCard: React.FC<SoilMoistureTrendCardProps> = ({
     
     if (!response.ok) {
       const errorText = await response.text().catch(() => 'Unable to read error response');
-      console.error('Soil moisture trend API Error:', response.status, errorText);
+      
+      // Handle 404 (Plot not found) gracefully - suppress error logging
+      if (response.status === 404) {
+        console.warn(`Plot '${plot}' not found in backend for soil moisture trend. Skipping.`);
+        // Return empty response to prevent error display
+        throw new Error('PLOT_NOT_FOUND');
+      }
+      
+      // Log other errors but don't use console.error to avoid cluttering console
+      if (response.status !== 404) {
+        console.warn('Soil moisture trend API Error:', response.status, errorText);
+      }
       throw new Error(`HTTP ${response.status} ${response.statusText} - ${errorText}`);
     }
     
@@ -179,8 +190,21 @@ const SoilMoistureTrendCard: React.FC<SoilMoistureTrendCardProps> = ({
       const todayItem = apiResp.soil_moisture_stack.find(item => item.day === todayStr);
       if (todayItem) setCurrentDateMoisture(parseFloat(todayItem.soil_moisture.toFixed(2)));
     } catch (err: any) {
-      console.error("Failed to fetch moisture trend data:", err);
-      setError(`Unable to load soil moisture trend: ${err?.message || err}`);
+      // Don't show error for plot not found - just skip silently
+      if (err.message === 'PLOT_NOT_FOUND') {
+        setError(null);
+        setLoading(false);
+        return;
+      }
+      
+      // Only show error for other types of failures
+      const errorMessage = err?.message || 'Unknown error';
+      if (!errorMessage.includes('not found') && !errorMessage.includes('Plot')) {
+        console.warn("Failed to fetch moisture trend data:", err);
+        setError(`Unable to load soil moisture trend: ${errorMessage}`);
+      } else {
+        setError(null); // Don't show plot not found errors
+      }
     } finally {
       setLoading(false);
     }

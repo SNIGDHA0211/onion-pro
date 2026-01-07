@@ -111,7 +111,18 @@ const SoilMoistureCard: React.FC<SoilMoistureCardProps> = ({
     
     if (!response.ok) {
       const errorText = await response.text().catch(() => 'Unable to read error response');
-      console.error('Soil moisture API Error:', response.status, errorText);
+      
+      // Handle 404 (Plot not found) gracefully - suppress error logging
+      if (response.status === 404) {
+        console.warn(`Plot '${plot}' not found in backend for soil moisture. Skipping.`);
+        // Return empty response to prevent error display
+        throw new Error('PLOT_NOT_FOUND');
+      }
+      
+      // Log other errors but don't use console.error to avoid cluttering console
+      if (response.status !== 404) {
+        console.warn('Soil moisture API Error:', response.status, errorText);
+      }
       throw new Error(`HTTP ${response.status} ${response.statusText} - ${errorText}`);
     }
     
@@ -159,8 +170,20 @@ const SoilMoistureCard: React.FC<SoilMoistureCardProps> = ({
       }));
       
     } catch (err: any) {
-      setError(`Failed to fetch soil moisture: ${err.message || err}`);
-      console.error('Soil moisture fetch error:', err);
+      // Don't show error for plot not found - just skip silently
+      if (err.message === 'PLOT_NOT_FOUND') {
+        setError(null);
+        setLoading(false);
+        return;
+      }
+      
+      // Only show error for other types of failures
+      const errorMessage = err.message || 'Unknown error';
+      if (!errorMessage.includes('not found') && !errorMessage.includes('Plot')) {
+        setError(`Failed to fetch soil moisture: ${errorMessage}`);
+      } else {
+        setError(null); // Don't show plot not found errors
+      }
     } finally {
       setLoading(false);
     }

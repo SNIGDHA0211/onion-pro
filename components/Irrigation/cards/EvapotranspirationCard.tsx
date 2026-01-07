@@ -116,13 +116,18 @@ const EvapotranspirationCard: React.FC<EvapotranspirationCardProps> = ({ plotsLo
           const errorText = await response.text().catch(() => 'Unable to read error response');
           console.error('ET API Error:', response.status, errorText);
           
-          // Handle 404 (Plot not found) gracefully - don't show error to user
+          // Handle 404 (Plot not found) gracefully - suppress error logging
           if (response.status === 404) {
-            console.warn(`Plot '${plotName}' not found in backend. Skipping error display.`);
+            console.warn(`Plot '${plotName}' not found in backend for ET data. Skipping.`);
             setError(null); // Clear any previous error
             setLoading(false);
             fetchingRef.current = false;
             return; // Exit early without throwing error
+          }
+          
+          // Log other errors with warning instead of error to reduce console noise
+          if (response.status !== 404) {
+            console.warn('ET API Error:', response.status, errorText);
           }
           
           throw new Error(`HTTP ${response.status} ${response.statusText} - ${errorText}`);
@@ -204,16 +209,19 @@ const EvapotranspirationCard: React.FC<EvapotranspirationCardProps> = ({ plotsLo
 
       } catch (err: any) {
         const errorMessage = err.message || 'Unknown error';
-        setError(`Failed to fetch ET data: ${errorMessage}`);
         
-        // Log detailed error for debugging
-        console.error('ET API fetch error:', {
-          error: err,
-          message: err?.message,
-          name: err?.name,
-          url: `https://fastapi-soil-service-production.up.railway.app/plots/${plotName}/compute-et/?file_path=plots.geojson`,
-          plotName: plotName
-        });
+        // Don't show error for plot not found - just skip silently
+        if (errorMessage.includes('not found') || errorMessage.includes('Plot')) {
+          setError(null);
+        } else {
+          setError(`Failed to fetch ET data: ${errorMessage}`);
+          // Log other errors with warning instead of error to reduce console noise
+          console.warn('ET API fetch error:', {
+            message: err?.message,
+            name: err?.name,
+            plotName: plotName
+          });
+        }
         
         // Only clear data if we don't have cached data
         if (!getCached(cacheKey)) {
