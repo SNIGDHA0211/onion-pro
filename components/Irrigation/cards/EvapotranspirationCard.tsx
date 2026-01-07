@@ -2,6 +2,7 @@ import React, { useEffect, useState, useRef } from "react";
 import { Waves } from "lucide-react";
 import "../Irrigation.css";
 import { useAppContext } from "../../../context/AppContext";
+import { SOIL_SERVICE_BASE_URL } from "../../../services/apiConfig";
 
 interface HourlyETRecord {
   time: string;
@@ -96,7 +97,7 @@ const EvapotranspirationCard: React.FC<EvapotranspirationCardProps> = ({ plotsLo
         setError(null);
 
         // Use POST request with empty body as per API specification
-        const url = `https://fastapi-soil-service-production.up.railway.app/plots/${plotName}/compute-et/?file_path=plots.geojson`;
+        const url = `${SOIL_SERVICE_BASE_URL}/plots/${plotName}/compute-et/?file_path=plots.geojson`;
         
         console.log('Fetching ET data for plot:', plotName);
         console.log('API URL:', url);

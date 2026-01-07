@@ -78,7 +78,9 @@ export interface AnalysisResponse {
   pixel_summary?: PixelSummary;
 }
 
-const BASE_URL = 'https://fastapi-soil-service-production.up.railway.app';
+import { SOIL_SERVICE_BASE_URL } from './apiConfig';
+
+const BASE_URL = SOIL_SERVICE_BASE_URL;
 
 export const fetchGrowthAnalysis = async (plotName: string): Promise<AnalysisResponse> => {
   const response = await fetch(

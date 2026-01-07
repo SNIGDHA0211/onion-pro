@@ -1,7 +1,9 @@
 
 import { WeatherData } from '../types';
 
-const BASE_URL = 'https://dev-weather.cropeye.ai';
+import { WEATHER_SERVICE_BASE_URL } from './apiConfig';
+
+const BASE_URL = WEATHER_SERVICE_BASE_URL;
 
 /**
  * Extracts numeric values from strings like "26.0 °C", "96 %", or "7.8 km/h"

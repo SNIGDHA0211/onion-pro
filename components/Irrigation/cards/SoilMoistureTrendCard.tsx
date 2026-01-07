@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { AreaChart } from "lucide-react";
 import { useAppContext } from "../../../context/AppContext";
+import { SOIL_SERVICE_BASE_URL } from "../../../services/apiConfig";
 
 interface MoistureData {
   date: string;
@@ -86,7 +87,7 @@ const SoilMoistureTrendCard: React.FC<SoilMoistureTrendCardProps> = ({
 
   // New endpoint utilities
   const fetchSoilMoistureStack = async (plot: string): Promise<SoilMoistureStackResponse> => {
-    const url = `https://fastapi-soil-service-production.up.railway.app/soil-moisture/${encodeURIComponent(plot)}?file_path=plots.geojson`;
+    const url = `${SOIL_SERVICE_BASE_URL}/soil-moisture/${encodeURIComponent(plot)}?file_path=plots.geojson`;
     
     console.log('Fetching soil moisture trend for plot:', plot);
     console.log('API URL:', url);

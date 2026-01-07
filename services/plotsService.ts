@@ -1,3 +1,5 @@
+import { SOIL_SERVICE_BASE_URL } from './apiConfig';
+
 export interface GeoJSONFeature {
   type: string;
   geometry: {
@@ -19,7 +21,7 @@ export interface PlotsResponse {
 
 export const fetchPlots = async (): Promise<PlotsResponse> => {
   const response = await fetch(
-    'https://fastapi-soil-service-production.up.railway.app/plots/list?file_path=plots.geojson',
+    `${SOIL_SERVICE_BASE_URL}/plots/list?file_path=plots.geojson`,
     {
       method: 'GET',
       headers: {
@@ -45,7 +47,7 @@ export const extractPlotNames = (data: PlotsResponse): string[] => {
 // Fetch plot names from the simple plots endpoint
 export const fetchPlotNames = async (): Promise<string[]> => {
   const response = await fetch(
-    'https://fastapi-soil-service-production.up.railway.app/plots?file_path=plots.geojson',
+    `${SOIL_SERVICE_BASE_URL}/plots?file_path=plots.geojson`,
     {
       method: 'GET',
       headers: {
