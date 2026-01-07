@@ -17,9 +17,9 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   const [appState, setAppState] = useState<AppState>({
     weatherChartData: [],
     weatherSelectedDay: null,
-    selectedPlot: '369_12',
+    selectedPlot: 'NHRDF_Garlic',
   });
-  const [selectedPlotName, setSelectedPlotName] = useState('369_12');
+  const [selectedPlotName, setSelectedPlotName] = useState('NHRDF_Garlic');
 
   const cache = new Map<string, any>();
 

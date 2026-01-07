@@ -174,7 +174,7 @@ export const fetchSoilAnalysis = async (
   startDate: string = '2025-11-01',
   endDate: string = '2026-01-01'
 ): Promise<SoilAnalysisResponse> => {
-  const url = `${BASE_URL}/process_plot?plot_name=${encodeURIComponent(plotName)}&start_date=${startDate}&end_date=${endDate}`;
+  const url = `${BASE_URL}/process_plot?plot_name=${encodeURIComponent(plotName)}&start_date=${startDate}&end_date=${endDate}&file_path=plots.geojson`;
   
   try {
     const response = await fetch(url, {
@@ -202,6 +202,30 @@ export const fetchSoilAnalysis = async (
         throw new Error('Backend service is temporarily unavailable. Please try again in a few moments.');
       }
       
+      // Handle 400 Bad Request - often means plot not found
+      if (response.status === 400) {
+        let errorMessage = 'Failed to fetch soil analysis';
+        try {
+          const errorJson = JSON.parse(errorText);
+          if (errorJson.message?.includes('not found') || errorJson.message?.includes('Plot')) {
+            errorMessage = `Plot '${plotName}' not found. Please select a valid plot from the list.`;
+          } else if (errorJson.message) {
+            errorMessage = errorJson.message;
+          }
+        } catch {
+          // If parsing fails, use the raw error text if it contains useful info
+          if (errorText.includes('not found') || errorText.includes('Plot')) {
+            errorMessage = `Plot '${plotName}' not found. Please select a valid plot from the list.`;
+          }
+        }
+        throw new Error(errorMessage);
+      }
+      
+      // Handle 404 Not Found
+      if (response.status === 404) {
+        throw new Error(`Plot '${plotName}' not found. Please select a valid plot from the list.`);
+      }
+      
       throw new Error(`Failed to fetch soil analysis: ${response.status} ${response.statusText}`);
     }
 
@@ -217,6 +241,11 @@ export const fetchSoilAnalysis = async (
       startDate,
       endDate,
     });
+    
+    // If error already has a user-friendly message, re-throw it
+    if (error?.message?.includes("not found") || error?.message?.includes("Plot")) {
+      throw error;
+    }
     
     // Provide more specific error messages
     let errorMessage = 'Failed to fetch soil analysis';

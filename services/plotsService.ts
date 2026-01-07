@@ -42,3 +42,24 @@ export const extractPlotNames = (data: PlotsResponse): string[] => {
   });
 };
 
+// Fetch plot names from the simple plots endpoint
+export const fetchPlotNames = async (): Promise<string[]> => {
+  const response = await fetch(
+    'https://fastapi-soil-service-production.up.railway.app/plots?file_path=plots.geojson',
+    {
+      method: 'GET',
+      headers: {
+        'accept': 'application/json',
+      },
+    }
+  );
+
+  if (!response.ok) {
+    throw new Error(`Failed to fetch plot names: ${response.statusText}`);
+  }
+
+  const plotNames = await response.json();
+  console.log('Available plot names from API:', plotNames);
+  return plotNames;
+};
+
