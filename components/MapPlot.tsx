@@ -82,14 +82,28 @@ const MapUpdater: React.FC<{ selectedId: string | null; geojson: any; plotsData:
           map.fitBounds(bounds, { padding: [50, 50], maxZoom: 18 });
         }
       }
-    } else if (selectedId === 'All' && geojson && geojson.features && map && geojson.features.length > 0) {
-      // Fit bounds to show all plots
-      const geoJsonLayer = L.geoJSON(geojson as any);
-      const bounds = geoJsonLayer.getBounds();
-      if (bounds.isValid()) {
-        map.fitBounds(bounds, { padding: [50, 50], maxZoom: 16 });
-      }
-    }
+   } else if (
+  selectedId === 'All' &&
+  geojson &&
+  geojson.features &&
+  map &&
+  geojson.features.length > 0
+) {
+  const geoJsonLayer = L.geoJSON(geojson as any);
+  const bounds = geoJsonLayer.getBounds();
+
+  if (bounds.isValid()) {
+    map.fitBounds(bounds, { padding: [50, 50], maxZoom: 16 });
+
+    // 🔑 IMPORTANT: force Leaflet to recalculate container size
+    setTimeout(() => {
+      try {
+        map.invalidateSize();
+      } catch (e) {}
+    }, 200);
+  }
+}
+
   }, [selectedId, geojson, map, plotsData]);
 
   return null;
@@ -808,7 +822,8 @@ export const MapPlot: React.FC = () => {
   }, [selectedLegendLabel]);
 
   return (
-    <div className="bg-white rounded-3xl p-4 pb-3 shadow-xl border border-gray-100 flex flex-col h-full">
+    <div className="bg-white rounded-3xl p-4 pb-3 shadow-xl border border-gray-100 flex flex-col h-full min-h-[600px]">
+
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-3 mb-3">
         <div className="flex flex-wrap gap-2">
           {tabs.map(tab => (
@@ -851,7 +866,9 @@ export const MapPlot: React.FC = () => {
         </div>
       </div>
 
-      <div className="relative flex-grow rounded-2xl overflow-hidden border border-gray-100 bg-gray-200 min-h-[250px]" style={{ height: '100%', minHeight: '250px' }}>
+<div
+  className="relative flex-1 rounded-2xl overflow-hidden border border-gray-100 bg-gray-200"
+>
         {loading ? (
           <div className="w-full h-full flex items-center justify-center">
             <div className="text-gray-500 font-bold">Loading plots...</div>
